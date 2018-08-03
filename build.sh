@@ -1,11 +1,19 @@
-set -ex
+#!/bin/bash
+#set -ex
+#clear and pruge images
+#docker system prune -a
+# remover todas las imagenes
+#docker rmi $(docker images -a -q)
 # SET THE FOLLOWING VARIABLES
 # docker hub username
 USERNAME=e4cash
 # image name
-IMAGE=middleware
+IMAGE=wildfly
 # version wildfly
-WILDFLY_VERSION=12.0.0
+VERSION=12.0.0
 
-docker build --tag=$IMAGE-wildfly-$WILDFLY_VERSION -t $USERNAME/$IMAGE-wildfly-$WILDFLY_VERSION:latest .
+docker build -t $USERNAME/$IMAGE-$VERSION:latest .
 
+sleep 5 
+
+docker images -a

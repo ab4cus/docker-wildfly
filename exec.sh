@@ -1,3 +1,3 @@
 set -ex
 
-docker exec -it wildfly12-core bash
+docker exec -it middleware-wildfly bash

@@ -3,12 +3,15 @@ set -ex
 # docker hub username
 USERNAME=e4cash
 # image name
-IMAGE=middleware
+IMAGE=wildfly
+# version tomcat
+VERSION=12.0.0
+
 # ensure we're up to date
 git pull
 
 # bump version
-docker run --rm -v "$PWD":/app treeder/bump patch
+#docker run --rm -v "$PWD":/tmp $USERNAME/$IMAGE-$VERSION "$(git log -1 --pretty=%B)"
 version=`cat VERSION`
 echo "version: $version"
 
