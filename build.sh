@@ -16,4 +16,4 @@ docker build -t $USERNAME/$IMAGE-$VERSION:latest .
 
 sleep 5 
 
-docker images -a
+docker images 

@@ -28,17 +28,17 @@ ENV JAVA_HOME /opt/jdk
 ENV PATH ${PATH}:${JAVA_HOME}/bin
 ENV POSTGRESQL_VERSION 9.4-1201-jdbc41
 
-ARG DB_HOST=postgresql
-ARG DB_NAME=e4cash
+ARG DB_HOST=db.e4cash.net
+ARG DB_NAME=janusDB
 ARG DB_USER=e4cash
-ARG DB_PASS=e41234
+ARG DB_PASS=janusTestDB01
 
 #RUN apt-get update
 RUN apt-get update && apt-get install -y --no-install-recommends apt-utils iputils-ping
 RUN apt-get -qq -y install curl ca-certificates tar wget vim
 RUN apt-get -qq -y install software-properties-common 
 
-RUN mkdir -p /opt/jboss/wildfly
+RUN mkdir -p $JBOSS_HOME
 RUN groupadd -r wildfly
 RUN useradd -r -g wildfly -d /opt/jboss/wildfly -s /sbin/nologin wildfly
 RUN chown -R wildfly:wildfly /opt/jboss
@@ -90,20 +90,37 @@ RUN cd /tmp && \
   mkdir -p $JBOSS_HOME && \
   mv /tmp/wildfly-$WILDFLY_VERSION/* $JBOSS_HOME/ && \
   rm -r wildfly-* && \
-  $JBOSS_HOME/bin/add-user.sh admin -p admin -s
+  $JBOSS_HOME/bin/add-user.sh admin -p admin -s && \
+  $JBOSS_HOME/bin/add-user.sh -a -u jmsuser -p password
+
+# Copy JDBC Drivers
+
+COPY mysql-connector-java-8.0.12.jar /opt/jboss/wildfly 
+COPY postgresql-42.2.4.jar ${JBOSS_HOME}
+COPY ojdbc7.jar $JBOSS_HOME
+
+RUN cp $JBOSS_HOME/*.jar $JBOSS_HOME/standalone/deployments
 
 # Install postgres drivers and datasource
 RUN /bin/sh -c '$JBOSS_HOME/bin/standalone.sh &' && \
   sleep 10 && \
   cd /tmp && \
-  curl --location --output postgresql-${POSTGRESQL_VERSION}.jar --url http://search.maven.org/remotecontent?filepath=org/postgresql/postgresql/${POSTGRESQL_VERSION}/postgresql-${POSTGRESQL_VERSION}.jar && \
-  $JBOSS_HOME/bin/jboss-cli.sh --connect --command="deploy /tmp/postgresql-${POSTGRESQL_VERSION}.jar" && \
-  $JBOSS_HOME/bin/jboss-cli.sh --connect --command="xa-data-source add --name=e4cash-postgresql --jndi-name=java:/jdbc/datasources/e4cashDS --user-name=${DB_USER} --password=${DB_PASS} --driver-name=postgresql-9.4-1201-jdbc41.jar --xa-datasource-class=org.postgresql.xa.PGXADataSource --xa-datasource-properties=ServerName=${DB_HOST},PortNumber=5432,DatabaseName=${DB_NAME} --valid-connection-checker-class-name=org.jboss.jca.adapters.jdbc.extensions.postgres.PostgreSQLValidConnectionChecker --exception-sorter-class-name=org.jboss.jca.adapters.jdbc.extensions.postgres.PostgreSQLExceptionSorter" && \
+  #curl --location --output postgresql-${POSTGRESQL_VERSION}.jar --url http://search.maven.org/remotecontent?filepath=org/postgresql/postgresql/${POSTGRESQL_VERSION}/postgresql-${POSTGRESQL_VERSION}.jar && \
+  #$JBOSS_HOME/bin/jboss-cli.sh --connect --command="deploy /tmp/postgresql-${POSTGRESQL_VERSION}.jar" && \
+  #$JBOSS_HOME/bin/jboss-cli.sh --connect --command="xa-data-source add --name=e4cash-postgresql --jndi-name=java:/jdbc/datasources/e4cashDS --user-name=${DB_USER} --password=${DB_PASS} --driver-name=postgresql-9.4-1201-jdbc41.jar --xa-datasource-class=org.postgresql.xa.PGXADataSource --xa-datasource-properties=ServerName=${DB_HOST},PortNumber=5432,DatabaseName=${DB_NAME} --valid-connection-checker-class-name=org.jboss.jca.adapters.jdbc.extensions.postgres.PostgreSQLValidConnectionChecker --exception-sorter-class-name=org.jboss.jca.adapters.jdbc.extensions.postgres.PostgreSQLExceptionSorter" && \
+# $JBOSS_HOME/bin/jboss-cli.sh --connect --command="jms-queue add --queue-address=E4CashQueue --durable=true --entries=[java:/jms/queue/E4CashQueue]" && \
+# $JBOSS_HOME/bin/jboss-cli.sh --connect --command="module add --name=com.mysql --resources=/tmp/mysql-connector-java-8.0.12.jar --dependencies=javax.api,javax.transaction.api" && \
+# $JBOSS_HOME/bin/jboss-cli.sh --connect --command="module add --name=org.postgresql --resources=/tmp/postgresql-42.2.4.jar --dependencies=javax.api,javax.transaction.api" && \
+# $JBOSS_HOME/bin/jboss-cli.sh --connect --command="module add --name=com.oracle --resources=/tmp/ojdbc7.jar --dependencies=javax.api,javax.transaction.api" && \
+# $JBOSS_HOME/bin/jboss-cli.sh --connect --command="data-source add --jndi-name=java:/jdbc/datasources/MySqljanusDS  --name=MySqlPool --connection-url=jdbc:mysql://${DB_HOST}:3306/${DB_NAME} --driver-name=mysql --user-name=${DB_USER} --password=${DB_PASS}" && \
+# $JBOSS_HOME/bin/jboss-cli.sh --connect --command="data-source add --jndi-name=java:/jdbc/datasources/PostgreSqljanusDS  --name=PostgreSqlPool --connection-url=jdbc:postgresql://${DB_HOST}:5432/${DB_NAME} --driver-name=postgresql --user-name=${DB_USER} --password=${DB_PASS}" && \
+# $JBOSS_HOME/bin/jboss-cli.sh --connect --command="data-source add --jndi-name=java:/jdbc/datasources/OracleSqljanusDS  --name=OracleDBPool --connection-url=jdbc:oracle:thin:@${DB_HOST}:1521/${DB_NAME} --driver-name=oracle --user-name=${DB_USER} --password=${DB_PASS}" && \
   $JBOSS_HOME/bin/jboss-cli.sh --connect --command=:shutdown && \
   rm -rf $JBOSS_HOME/standalone/configuration/standalone_xml_history/ $JBOSS_HOME/standalone/log/* && \
-  rm /tmp/postgresql-9.4*.jar && \
-  rm -rf /tmp/postgresql-*.jar
-
+  ls -l /tmp
+#  rm -rf /tmp/postgresql-*.jar && \
+#  rm -rf /tmp/mysql*.jar && \
+#  rm -rf /tmp/ojdbc*.jar
 
 # Expose http and admin ports
 EXPOSE 8080 9990
